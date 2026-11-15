@@ -3,7 +3,7 @@
 {% block title %}Portfolio{% endblock %}
 
 {% block content %}
-    <div class="toolbar">
+  <div class="toolbar">
     <div class="page-header mb-0">
       <h1>Investment Portfolio</h1>
       <p class="mb-0">Track what you own and how it is performing.</p>
@@ -20,27 +20,14 @@
         <a href="{{ url_for('billing.pricing') }}" class="btn btn-light text-nowrap" title="Premium feature">
           <i class="bi bi-lock"></i> Export CSV</a>
       {% endif %}
-          <div class="d-flex gap-2 flex-wrap">
-      <form method="POST" action="{{ url_for('refresh_prices') }}">
-        <button type="submit" class="btn btn-light text-nowrap">
-          <i class="bi bi-arrow-repeat"></i> Refresh prices</button>
-      </form>
-      {% if current_user.is_premium %}
-        <a href="{{ url_for('export_holdings') }}" class="btn btn-light text-nowrap">
-          <i class="bi bi-download"></i> Export CSV</a>
-      {% else %}
-        <a href="{{ url_for('billing.pricing') }}" class="btn btn-light text-nowrap" title="Premium feature">
-          <i class="bi bi-lock"></i> Export CSV</a>
-      {% endif %}
       <a href="{{ url_for('add_holding') }}" class="btn btn-accent text-nowrap">
         <i class="bi bi-plus-lg"></i> Add holding</a>
-    </div>
     </div>
   </div>
 
   {% if not current_user.is_premium %}
-    <p class="text-muted small mt-2 mb-0">Free plan: Stocks, Mutual Funds, Gold and Fixed Deposits.
-      Premium unlocks every asset type.</p>
+    <p class="text-muted small mt-2 mb-0">Free plan: Stocks, Mutual Funds, Gold and Fixed Deposits,
+      up to 5 holdings. Premium unlocks every asset type and unlimited holdings.</p>
   {% endif %}
 
   <!-- Totals: green for profit, red ONLY for a loss -->
