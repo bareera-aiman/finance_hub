@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Hello, {{ current_user.username }} 👋</h1>
+    <p>Your money at a glance, and where it could go.</p>
+  </div>
+
+  <!-- Total balance and net worth -->
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <div class="card-box stat-card">
+        <div class="stat-label">Total balance</div>
+        <div class="stat-value {{ 'text-loss' if money.balance < 0 }}">{{ money.balance|inr }}</div>
+        <div class="stat-sub">opening balance + income − expenses</div>
+
+        <!-- Set the starting balance (what you had before you began using the app) -->
+        <form method="POST" action="{{ url_for('set_opening_balance') }}"
+              class="d-flex gap-2 align-items-center mt-3">
+          <label class="small text-muted text-nowrap">Opening balance ₹</label>
+          <input type="number" name="opening_balance" class="form-control form-control-sm"
+                 style="max-width: 150px" min="0" step="0.01" required
+                 value="{{ current_user.opening_balance }}">
+          <button type="submit" class="btn btn-light btn-sm">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card-box stat-card">
+        <div class="stat-label">Net worth</div>
+        <div class="stat-value {{ 'text-profit' if money.net_worth > 0 else ('text-loss' if money.net_worth < 0 else '') }}">
+          {{ money.net_worth|inr }}</div>
+        <div class="stat-sub">balance + investments ({{ pf.value|inr }})</div>
+      </div>
+    </div>
+  </div>
+
+  {% set sv_class = 'text-profit' if avg_savings > 0 else ('text-loss' if avg_savings < 0 else '') %}
+  {% set pl_class = 'text-profit' if pf.pl > 0 else ('text-loss' if pf.pl < 0 else '') %}
+
+  <!-- Summary cards -->
+  <div class="row g-3">
+    <div class="col-md-6 col-xl-3"><div class="card-box stat-card">
+      <div class="stat-label">Avg. monthly savings</div>
+      <div class="stat-value {{ sv_class }}">{{ avg_savings|inr }}</div>
+      <div class="stat-sub">
+        {% if savings_months %}last {{ savings_months }} month{{ 's' if savings_months > 1 }}{% else %}no data yet{% endif %}
+      </div></div></div>
+
+    <div class="col-md-6 col-xl-3"><div class="card-box stat-card">
+      <div class="stat-label">Portfolio value</div>
+      <div class="stat-value">{{ pf.value|inr }}</div>
+      <div class="stat-sub">invested {{ pf.invested|inr }}</div></div></div>
+
+    <div class="col-md-6 col-xl-3"><div class="card-box stat-card">
+      <div class="stat-label">Portfolio profit / loss</div>
+      <div class="stat-value {{ pl_class }}">{{ '+' if pf.pl > 0 }}{{ pf.pl|inr }}</div>
+      <div class="stat-sub">{{ '%+.2f'|format(pf.pl_pct) }}% return</div></div></div>
+
+    <div class="col-md-6 col-xl-3"><div class="card-box stat-card">
+      <div class="stat-label">Suggested SIP</div>
+      <div class="stat-value">{{ suggested_sip|inr }}</div>
+      <div class="stat-sub">per month (50% of savings)</div></div></div>
+  </div>
+
+  <!-- The creative twist -->
+  <div class="row g-3 mt-1">
+    <div class="col-lg-4">
+      <div class="card-box h-100">
+        <h5><i class="bi bi-stars" style="color: var(--accent)"></i> Smart SIP suggestion</h5>
+
+        {% if suggested_sip > 0 %}
+          <p>You save about <strong>{{ avg_savings|inr }}</strong> a month. If you invest half of
+             it, <strong>{{ suggested_sip|inr }}</strong> every month, and keep the rest as a safety buffer,
+             here is how your money could grow.</p>
+
+          <form method="GET" class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small mb-1">Years</label>
+              <input type="number" name="years" class="form-control" min="1" max="50" step="1" value="{{ years }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">Return (%)</label>
+              <input type="number" name="rate" class="form-control" min="0" max="50" step="0.1" value="{{ rate }}">
+            </div>
+            <div class="col-12"><button type="submit" class="btn btn-accent w-100">Update projection</button></div>
+          </form>
+
+          <div class="proj-row"><span>Suggested SIP after {{ years }} yrs</span>
+            <strong>{{ projection.sip_final|inr }}</strong></div>
+          <div class="proj-row"><span>Current portfolio after {{ years }} yrs</span>
+            <strong>{{ projection.portfolio_final|inr }}</strong></div>
+          <div class="proj-row"><span>Combined</span>
+            <strong class="text-profit">{{ projection.combined_final|inr }}</strong></div>
+
+          <a href="{{ url_for('sip', amount=suggested_sip, rate=rate, years=years) }}"
+             class="btn btn-light w-100 mt-3">Open in SIP Calculator</a>
+        {% else %}
+          <p class="text-muted">Add your income and expenses first. Once you have monthly savings,
+             we will suggest a SIP amount here and project how it could grow.</p>
+          <a href="{{ url_for('expenses') }}" class="btn btn-accent">Go to Expenses</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card-box h-100">
+        <h5>Projected growth</h5>
+        {% if suggested_sip > 0 %}
+          <div class="chart-box"><canvas id="projChart"></canvas></div>
+          <p class="text-muted small mt-3 mb-0">
+            Assumes a constant {{ rate }}% annual return on both the SIP and your current portfolio.
+            Real returns vary and are not guaranteed. This is an estimate, not financial advice.</p>
+        {% else %}
+          <p class="text-muted mb-0">The projection chart appears here once there are savings to invest.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+{% if suggested_sip > 0 %}
+<script>
+  drawLine("projChart", {{ projection.labels|tojson }}, [
+    { label: "Current portfolio alone", data: {{ projection.portfolio_only|tojson }}, color: COLORS.navy },
+    { label: "Portfolio + suggested SIP", data: {{ projection.combined|tojson }}, color: COLORS.accent, fill: true }
+  ]);
+</script>
+{% endif %}
+{% endblock %}

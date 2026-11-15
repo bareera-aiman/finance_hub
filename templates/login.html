@@ -1,0 +1,27 @@
+{% extends "auth_base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+  <div class="auth-title">Welcome back</div>
+  <div class="auth-sub">Log in to manage your money.</div>
+
+  <!-- No action attribute: posts to the current URL, so ?next=... is kept -->
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <input type="text" name="username" class="form-control" value="{{ username or '' }}" required autofocus>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input type="password" name="password" class="form-control" required>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="remember" id="remember">
+      <label class="form-check-label" for="remember">Remember me</label>
+    </div>
+    <button type="submit" class="btn btn-accent w-100">Log in</button>
+  </form>
+
+  <p class="text-center mt-3 mb-0">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    <div class="demo-hint">Demo accounts (password <strong>demo123</strong>):<br>
+    <strong>demo</strong> (Premium) · <strong>demo_free</strong> (Free)</div>
+{% endblock %}

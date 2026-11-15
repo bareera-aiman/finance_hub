@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% set active_page = "portfolio" %}
+{% block title %}Portfolio{% endblock %}
+
+{% block content %}
+    <div class="toolbar">
+    <div class="page-header mb-0">
+      <h1>Investment Portfolio</h1>
+      <p class="mb-0">Track what you own and how it is performing.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <form method="POST" action="{{ url_for('refresh_prices') }}">
+        <button type="submit" class="btn btn-light text-nowrap">
+          <i class="bi bi-arrow-repeat"></i> Refresh prices</button>
+      </form>
+      {% if current_user.is_premium %}
+        <a href="{{ url_for('export_holdings') }}" class="btn btn-light text-nowrap">
+          <i class="bi bi-download"></i> Export CSV</a>
+      {% else %}
+        <a href="{{ url_for('billing.pricing') }}" class="btn btn-light text-nowrap" title="Premium feature">
+          <i class="bi bi-lock"></i> Export CSV</a>
+      {% endif %}
+      <a href="{{ url_for('add_holding') }}" class="btn btn-accent text-nowrap">
+        <i class="bi bi-plus-lg"></i> Add holding</a>
+    </div>
+  </div>
+
+  {% if not current_user.is_premium %}
+    <p class="text-muted small mt-2 mb-0">Free plan: Stocks, Mutual Funds, Gold and Fixed Deposits.
+      Premium unlocks every asset type.</p>
+  {% endif %}
+
+  <!-- Totals: green for profit, red ONLY for a loss -->
+  {% set pl_class = 'text-profit' if summary.pl > 0 else ('text-loss' if summary.pl < 0 else '') %}
+  <div class="row g-3 mt-1">
+    <div class="col-md-3"><div class="card-box stat-card">
+      <div class="stat-label">Invested amount</div>
+      <div class="stat-value">{{ summary.invested|inr }}</div></div></div>
+    <div class="col-md-3"><div class="card-box stat-card">
+      <div class="stat-label">Current value</div>
+      <div class="stat-value">{{ summary.value|inr }}</div></div></div>
+    <div class="col-md-3"><div class="card-box stat-card">
+      <div class="stat-label">Profit / Loss</div>
+      <div class="stat-value {{ pl_class }}">{{ '+' if summary.pl > 0 }}{{ summary.pl|inr }}</div></div></div>
+    <div class="col-md-3"><div class="card-box stat-card">
+      <div class="stat-label">Return</div>
+      <div class="stat-value {{ pl_class }}">{{ '%+.2f'|format(summary.pl_pct) }}%</div></div></div>
+  </div>
+
+  {% if summary.rows %}
+  <div class="row g-3 mt-1">
+    <!-- Allocation by asset type -->
+    <div class="col-lg-4">
+      <div class="card-box">
+        <h5>Allocation by asset type</h5>
+        <div class="chart-box"><canvas id="allocChart"></canvas></div>
+        <div class="mt-3">
+          {% for t in by_type %}
+            <div class="proj-row"><span>{{ t.type }}</span>
+              <strong>{{ t.value|inr }} · {{ '%.1f'|format(t.pct) }}%</strong></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Holdings table -->
+    <div class="col-lg-8">
+      <div class="card-box">
+        <h5>Holdings</h5>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead><tr>
+              <th>Name</th><th class="text-end">Qty</th>
+              <th class="text-end">Buy</th><th class="text-end">Current</th>
+              <th class="text-end">Value</th><th class="text-end">P/L</th><th></th>
+            </tr></thead>
+            <tbody>
+            {% for r in summary.rows %}
+              {% set h = r.holding %}
+              {% set units = asset_types.get(h.asset_type, asset_types['Other']) %}
+              {% set cls = 'text-profit' if r.pl > 0 else ('text-loss' if r.pl < 0 else '') %}
+              <tr>
+                <td>{{ h.name }}
+                  <div><span class="badge-cat">{{ h.asset_type }}</span>
+                    {% if h.symbol %}<span class="small text-muted ms-1">{{ h.symbol }}</span>{% endif %}</div></td>
+                <td class="text-end">
+                  {{ '%d'|format(h.quantity) if h.quantity == h.quantity|int else h.quantity }}
+                  <div class="small text-muted">{{ units[0] if h.quantity == 1 else units[1] }}</div></td>
+                <td class="text-end">{{ h.buy_price|inr }}</td>
+                <td class="text-end">{{ h.current_price|inr }}</td>
+                <td class="text-end">{{ r.current_value|inr }}</td>
+                <td class="text-end fw-semibold {{ cls }}">
+                  {{ '+' if r.pl > 0 }}{{ r.pl|inr }}
+                  <div class="small">{{ '%+.2f'|format(r.pl_pct) }}%</div></td>
+                <td class="text-end text-nowrap">
+                  <a href="{{ url_for('edit_holding', holding_id=h.id) }}" class="icon-btn" title="Edit">
+                    <i class="bi bi-pencil"></i></a>
+                  <form method="POST" action="{{ url_for('delete_holding', holding_id=h.id) }}"
+                        class="d-inline" onsubmit="return confirm('Delete this holding?');">
+                    <button type="submit" class="icon-btn" title="Delete"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+    <div class="card-box text-center py-5 mt-3">
+      <p class="text-muted mb-0">No holdings yet. Click "Add holding" to record your first investment.</p>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if summary.rows %}
+<script>
+  drawCircle("allocChart", "doughnut", {{ alloc_labels|tojson }}, {{ alloc_values|tojson }});
+</script>
+{% endif %}
+{% endblock %}

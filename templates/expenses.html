@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set active_page = "expenses" %}
+{% block title %}Expenses{% endblock %}
+
+{% block content %}
+  <div class="toolbar">
+    <div class="page-header mb-0">
+      <h1>Expenses</h1>
+      <p class="mb-0">{{ month_title }}</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <!-- Month picker: submitting reloads the page with ?month=YYYY-MM -->
+      <form method="GET">
+        <input type="month" name="month" value="{{ month }}" class="form-control"
+               onchange="this.form.submit()">
+      </form>
+            {% if current_user.is_premium %}
+        <a href="{{ url_for('export_expenses') }}" class="btn btn-light text-nowrap">
+          <i class="bi bi-download"></i> Export CSV</a>
+      {% else %}
+        <a href="{{ url_for('billing.pricing') }}" class="btn btn-light text-nowrap" title="Premium feature">
+          <i class="bi bi-lock"></i> Export CSV</a>
+      {% endif %}
+      <a href="{{ url_for('add_expense') }}" class="btn btn-accent text-nowrap">
+        <i class="bi bi-plus-lg"></i> Add</a>
+    </div>
+  </div>
+
+  <!-- Monthly summary -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-4"><div class="card-box stat-card">
+      <div class="stat-label">Income</div>
+      <div class="stat-value">{{ income|inr }}</div></div></div>
+    <div class="col-md-4"><div class="card-box stat-card">
+      <div class="stat-label">Expenses</div>
+      <div class="stat-value">{{ spent|inr }}</div></div></div>
+    <div class="col-md-4"><div class="card-box stat-card">
+      <div class="stat-label">Savings</div>
+      <div class="stat-value {{ 'text-profit' if savings >= 0 else 'text-loss' }}">{{ savings|inr }}</div></div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mt-1">
+    <div class="col-lg-5">
+      <div class="card-box">
+        <h5>Spending by category</h5>
+        {% if cat_labels %}
+          <div class="chart-box"><canvas id="catChart"></canvas></div>
+        {% else %}
+          <p class="text-muted mb-0">No expenses in this month.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card-box">
+        <h5>Income vs expenses (last 6 months)</h5>
+        {% if month_labels %}
+          <div class="chart-box"><canvas id="monthChart"></canvas></div>
+        {% else %}
+          <p class="text-muted mb-0">Add some transactions to see this chart.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction list -->
+  <div class="card-box mt-3">
+    <h5>Transactions</h5>
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Date</th><th>Title</th><th>Category</th>
+          <th class="text-end">Amount</th><th></th></tr></thead>
+        <tbody>
+        {% for t in transactions %}
+          <tr>
+            <td>{{ t.date.strftime('%d %b') }}</td>
+                        <td>{{ t.title }}
+              <div class="small text-muted">{{ t.payment_mode }}{% if t.child %} · for {{ t.child.nickname }}{% endif %}</div></td>
+            <td><span class="badge-cat">{{ t.category }}</span></td>
+            <td class="text-end fw-semibold {{ 'text-profit' if t.type == 'income' }}">
+              {{ '+' if t.type == 'income' else '−' }}{{ t.amount|inr }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('edit_expense', expense_id=t.id) }}" class="icon-btn" title="Edit">
+                <i class="bi bi-pencil"></i></a>
+              <!-- Delete is a POST form (not a link) and asks for confirmation first -->
+              <form method="POST" action="{{ url_for('delete_expense', expense_id=t.id) }}"
+                    class="d-inline" onsubmit="return confirm('Delete this transaction?');">
+                <button type="submit" class="icon-btn" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted mb-0">No transactions in this month. Click "Add" to create one.</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Python lists -> JavaScript arrays using Jinja's |tojson filter
+  {% if cat_labels %}
+  drawCircle("catChart", "doughnut", {{ cat_labels|tojson }}, {{ cat_values|tojson }});
+  {% endif %}
+  {% if month_labels %}
+  drawBar("monthChart", {{ month_labels|tojson }}, [
+    { label: "Income",   data: {{ month_income|tojson }},  color: COLORS.accent },
+    { label: "Expenses", data: {{ month_expense|tojson }}, color: COLORS.navy }
+  ]);
+  {% endif %}
+</script>
+{% endblock %}

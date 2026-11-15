@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_page = "portfolio" %}
+{% block title %}{{ mode }} holding{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>{{ mode }} holding</h1>
+    <p>Enter the current price manually; you can update it any time.</p>
+  </div>
+
+  <div class="card-box form-card">
+    <form method="POST">
+      <div class="mb-3">
+        <label class="form-label">Asset type</label>
+        <select name="asset_type" id="asset_type" class="form-select">
+          {% for t in asset_types %}
+            {# A premium-only type is locked for free users (unless it is the holding's existing type) #}
+            {% set locked = (not current_user.is_premium) and (t not in free_types) and (t != current_type) %}
+            <option value="{{ t }}" {{ 'selected' if form.get('asset_type', 'Stocks') == t }}
+                    {{ 'disabled' if locked }}>{{ t }}{{ ' 🔒 Premium' if locked }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" maxlength="100" required
+               value="{{ form.get('name', '') }}" placeholder="e.g. Reliance Industries">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Symbol <span class="text-muted">(optional)</span></label>
+        <input type="text" name="symbol" class="form-control" maxlength="30"
+               value="{{ form.get('symbol', '') }}" placeholder="e.g. RELIANCE.NS">
+        <div class="form-text">Only needed for stocks, if you want live prices later.</div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Buy price (₹ per <span class="unit-one">share</span>)</label>
+          <input type="number" name="buy_price" class="form-control" step="0.01" min="0.01" required
+                 value="{{ form.get('buy_price', '') }}">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Quantity (<span class="unit-many">shares</span>)</label>
+          <input type="number" name="quantity" class="form-control" step="any" min="0.0001" required
+                 value="{{ form.get('quantity', '') }}">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Current price (₹ per <span class="unit-one">share</span>)</label>
+          <input type="number" name="current_price" class="form-control" step="0.01" min="0.01" required
+                 value="{{ form.get('current_price', '') }}">
+        </div>
+      </div>
+      <div class="form-text mb-4" id="oneHint" style="display: none;">
+        For a single deposit or account, enter quantity 1 and put the whole amount in the price fields.
+        Update the current price whenever the value changes.
+      </div>
+
+      <button type="submit" class="btn btn-accent">Save</button>
+      <a href="{{ url_for('portfolio') }}" class="btn btn-light ms-2">Cancel</a>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // UNITS = { "Gold": ["gram", "grams"], ... }  sent from Python with |tojson
+  const UNITS = {{ asset_types|tojson }};
+  const select = document.getElementById('asset_type');
+
+  function updateUnits() {
+    const unit = UNITS[select.value] || UNITS['Other'];
+    document.querySelectorAll('.unit-one').forEach(el => el.textContent = unit[0]);
+    document.querySelectorAll('.unit-many').forEach(el => el.textContent = unit[1]);
+    document.getElementById('oneHint').style.display =
+      (select.value === 'Fixed Deposit' || select.value === 'PPF/EPF') ? 'block' : 'none';
+  }
+  select.addEventListener('change', updateUnits);
+  updateUnits();
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% set active_page = "pricing" %}
+{% block title %}Payment{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Premium payment</h1>
+    <p>Demo checkout</p>
+  </div>
+
+  <div class="demo-banner mb-3">
+    <strong>This is a DEMO payment.</strong> It collects a small test amount by UPI. Nothing here is
+    confirmed automatically: an admin checks the payment manually, and Premium is switched on only after
+    that approval.
+  </div>
+
+  <div class="card-box form-card">
+    {% if pr.status == 'pending' and not expired %}
+      <h5>1. Pay exactly {{ pr.amount|inr }}</h5>
+      {% if qr %}
+        <div class="qr-box">{{ qr|safe }}</div>
+        <p class="text-center small text-muted mt-2">Scan with any UPI app.
+          On a phone, <a href="{{ upi_link }}">open in your UPI app</a>.</p>
+      {% else %}
+        <p class="text-muted">The QR code is unavailable because payments are not set up on this server.</p>
+      {% endif %}
+      <p class="small text-muted">Pay the exact amount shown. The unique paise let the admin match your
+        payment.</p>
+
+      <h5 class="mt-4">2. Enter the 12-digit UTR</h5>
+      <p class="small text-muted">You will find it in the payment confirmation of your UPI app. Time left:
+        <strong id="timer"></strong></p>
+      <form method="POST" action="{{ url_for('billing.submit_utr', request_id=pr.id) }}">
+        <input type="text" name="utr" class="form-control mb-3" required inputmode="numeric"
+               pattern="[0-9]{12}" maxlength="12" placeholder="12-digit UTR">
+        <button type="submit" class="btn btn-accent">Submit UTR</button>
+        <a href="{{ url_for('billing.pricing') }}" class="btn btn-light ms-2">Back</a>
+      </form>
+
+    {% elif pr.status == 'pending' and expired %}
+      <h5>This request expired</h5>
+      <p class="text-muted">The time to submit the UTR has passed. If you already paid, contact the admin
+        with your amount and UTR. Otherwise start a new request.</p>
+      <a href="{{ url_for('billing.pricing') }}" class="btn btn-accent">Back to plans</a>
+
+    {% elif pr.status == 'submitted' %}
+      <h5>Waiting for admin approval</h5>
+      <p>Amount: <strong>{{ pr.amount|inr }}</strong> · UTR: <strong>{{ pr.utr }}</strong></p>
+      <p class="text-muted">An admin will compare this with the bank statement and approve it manually.
+        Premium is <strong>not</strong> active yet. Refresh this page later.</p>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-light">Back to dashboard</a>
+
+    {% elif pr.status == 'approved' %}
+      <h5 class="text-profit">Approved</h5>
+      <p>Premium is active until <strong>{{ current_user.premium_until.strftime('%d %b %Y') }}</strong>.</p>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-accent">Go to dashboard</a>
+
+    {% else %}
+      <h5>Request rejected</h5>
+      <p class="text-muted">The admin could not match this payment. If you did pay, contact the admin with
+        your amount and UTR, or start a new request.</p>
+      <a href="{{ url_for('billing.pricing') }}" class="btn btn-accent">Back to plans</a>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+{% if pr.status == 'pending' and not expired %}
+<script>
+  // Countdown. When it reaches zero the page reloads and shows the "expired" message.
+  let left = {{ seconds_left }};
+  const timer = document.getElementById('timer');
+  function tick() {
+    if (left <= 0) { timer.textContent = '0:00'; setTimeout(() => location.reload(), 1500); return; }
+    timer.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    left--;
+    setTimeout(tick, 1000);
+  }
+  tick();
+</script>
+{% endif %}
+{% endblock %}

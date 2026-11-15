@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% set active_page = "expenses" %}
+{% block title %}{{ mode }} transaction{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>{{ mode }} transaction</h1>
+    <p>Record an income or an expense.</p>
+  </div>
+
+  <div class="card-box form-card">
+    <form method="POST">
+      <div class="mb-3">
+        <label class="form-label d-block">Type</label>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="type" id="t-exp" value="expense"
+                 {{ 'checked' if form.get('type', 'expense') == 'expense' }}>
+          <label class="form-check-label" for="t-exp">Expense</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="type" id="t-inc" value="income"
+                 {{ 'checked' if form.get('type', 'expense') == 'income' }}>
+          <label class="form-check-label" for="t-inc">Income</label>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input type="text" name="title" class="form-control" maxlength="100" required
+               value="{{ form.get('title', '') }}" placeholder="e.g. Groceries">
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required
+                 value="{{ form.get('amount', '') }}">
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" required
+                 value="{{ form.get('date', '') }}">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Category</label>
+          <select name="category" id="category" class="form-select"></select>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Payment mode</label>
+          <select name="payment_mode" class="form-select">
+            {% for m in payment_modes %}
+              <option value="{{ m }}" {{ 'selected' if form.get('payment_mode', 'UPI') == m }}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Child tag: Premium users who have added at least one child (expenses only) -->
+      {% if children %}
+      <div class="mb-4" id="childBox">
+        <label class="form-label">Spent on a child <span class="text-muted">(optional)</span></label>
+        <select name="child_id" class="form-select">
+          <option value="">None</option>
+          {% for c in children %}
+            <option value="{{ c.id }}" {{ 'selected' if form.get('child_id')|string == c.id|string }}>
+              {{ c.nickname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-accent">Save</button>
+      <a href="{{ url_for('expenses') }}" class="btn btn-light ms-2">Cancel</a>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // The category list depends on the type (expense / income)
+  const CATS = {{ categories|tojson }};
+  const selected = {{ form.get('category', '')|tojson }};
+
+  function currentType() {
+    return document.querySelector('input[name=type]:checked').value;
+  }
+  function fillCategories() {
+    const select = document.getElementById('category');
+    select.innerHTML = '';
+    CATS[currentType()].forEach(function (c) {
+      const option = new Option(c, c);
+      if (c === selected) option.selected = true;
+      select.add(option);
+    });
+  }
+  function toggleChild() {                       // the child tag only makes sense for expenses
+    const box = document.getElementById('childBox');
+    if (box) box.style.display = currentType() === 'expense' ? 'block' : 'none';
+  }
+  document.querySelectorAll('input[name=type]').forEach(function (r) {
+    r.addEventListener('change', function () { fillCategories(); toggleChild(); });
+  });
+  fillCategories();
+  toggleChild();
+</script>
+{% endblock %}

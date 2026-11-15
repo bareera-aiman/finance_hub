@@ -1,0 +1,7 @@
+{% extends "auth_base.html" %}
+{% block title %}Not allowed{% endblock %}
+{% block content %}
+  <div class="auth-title">Not allowed</div>
+  <div class="auth-sub">You don't have permission to open this page.</div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-accent w-100">Back to dashboard</a>
+{% endblock %}

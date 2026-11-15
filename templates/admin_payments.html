@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Payments (admin){% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Payment requests</h1>
+    <p>Open your bank or UPI app. Approve only if BOTH the amount and the UTR match a payment you received.</p>
+  </div>
+
+  <div class="card-box">
+    <h5>Waiting for review</h5>
+    {% if submitted %}
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>User</th><th>Amount</th><th>UTR</th><th>Requested (UTC)</th><th></th></tr></thead>
+        <tbody>
+        {% for r in submitted %}
+          <tr>
+            <td>{{ r.user.username }}</td>
+            <td class="fw-semibold">{{ r.amount|inr }}</td>
+            <td>{{ r.utr }}</td>
+            <td>{{ r.created_at.strftime('%d %b %H:%M') }}</td>
+            <td class="text-end text-nowrap">
+              <form method="POST" action="{{ url_for('billing.decide_payment', request_id=r.id, action='approve') }}"
+                    class="d-inline" onsubmit="return confirm('Approve? This gives {{ r.user.username }} Premium for {{ days }} days.');">
+                <button type="submit" class="btn btn-accent btn-sm">Approve</button></form>
+              <form method="POST" action="{{ url_for('billing.decide_payment', request_id=r.id, action='reject') }}"
+                    class="d-inline" onsubmit="return confirm('Reject this request?');">
+                <button type="submit" class="btn btn-light btn-sm">Reject</button></form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-muted mb-0">Nothing waiting for review.</p>
+    {% endif %}
+  </div>
+
+  <div class="card-box mt-3">
+    <h5>Recently decided</h5>
+    {% if recent %}
+      {% for r in recent %}
+        <div class="proj-row"><span>{{ r.user.username }} · {{ r.amount|inr }} · {{ r.utr }}</span>
+          <strong>{{ r.status }}</strong></div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted mb-0">No decisions yet.</p>
+    {% endif %}
+  </div>
+{% endblock %}

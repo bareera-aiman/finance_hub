@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% set active_page = "kids" %}
+{% block title %}Education goal planner{% endblock %}
+
+{% block content %}
+  <div class="toolbar">
+    <div class="page-header mb-0">
+      <h1>Education goal planner</h1>
+      <p class="mb-0">How much to invest each month for a child's education.</p>
+    </div>
+    <a href="{{ url_for('kids.index') }}" class="btn btn-light">Back to kids</a>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-4">
+      <div class="card-box">
+        <h5>Your goal</h5>
+        <form method="GET">
+          <div class="mb-3">
+            <label class="form-label">Cost of the education today (₹)</label>
+            <input type="number" name="target" class="form-control" min="1000" step="1" required
+                   value="{{ form.target }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Years left</label>
+            <input type="number" name="years" class="form-control" min="1" max="30" step="1" required
+                   value="{{ form.years }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Education inflation (% per year)</label>
+            <input type="number" name="inflation" class="form-control" min="0" max="30" step="0.1" required
+                   value="{{ form.inflation }}">
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Expected return (% per year)</label>
+            <input type="number" name="rate" class="form-control" min="0" max="50" step="0.1" required
+                   value="{{ form.rate }}">
+          </div>
+          <button type="submit" class="btn btn-accent w-100">Calculate</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      {% if result %}
+        <div class="row g-3">
+          <div class="col-md-6"><div class="card-box stat-card">
+            <div class="stat-label">Cost after {{ form.years }} years (with inflation)</div>
+            <div class="stat-value">{{ result.future_cost|inr }}</div></div></div>
+          <div class="col-md-6"><div class="card-box stat-card">
+            <div class="stat-label">Monthly SIP needed</div>
+            <div class="stat-value text-profit">{{ result.monthly_sip|inr }}</div></div></div>
+          <div class="col-md-6"><div class="card-box stat-card">
+            <div class="stat-label">Total you invest</div>
+            <div class="stat-value">{{ result.invested|inr }}</div></div></div>
+          <div class="col-md-6"><div class="card-box stat-card">
+            <div class="stat-label">Estimated growth</div>
+            <div class="stat-value">{{ result.growth|inr }}</div></div></div>
+        </div>
+
+        <div class="card-box mt-3">
+          <h5>Cost vs your SIP savings</h5>
+          <div class="chart-box"><canvas id="eduChart"></canvas></div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+          Assumes a constant education inflation and a constant return. Real fees and market returns
+          vary and are not guaranteed. This is an estimate, not financial advice.</p>
+      {% else %}
+        <div class="card-box text-center py-5">
+          <p class="text-muted mb-0">Fix the highlighted problems and click Calculate.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+{% if result %}
+<script>
+  drawLine("eduChart", {{ result.labels|tojson }}, [
+    { label: "Cost of education", data: {{ result.cost_series|tojson }}, color: COLORS.navy },
+    { label: "Your SIP savings", data: {{ result.sip_series|tojson }}, color: COLORS.accent, fill: true }
+  ]);
+</script>
+{% endif %}
+{% endblock %}

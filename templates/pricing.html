@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% set active_page = "pricing" %}
+{% block title %}Pricing{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Plans</h1>
+    <p>Start free. Upgrade when you need more.</p>
+  </div>
+
+  <div class="demo-banner mb-3">
+    <strong>Demo checkout.</strong> Premium is listed at ₹{{ price }}/month. In this demo project the
+    checkout collects only a small test payment (₹1 plus a few paise). Payments are
+    <strong>not confirmed automatically</strong>: you pay by UPI, enter the UTR, and an admin checks the
+    payment manually before Premium is switched on.
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card-box price-card">
+        <h5>Free</h5>
+        <div class="price">₹0</div>
+        <ul class="feature-list">
+          <li><i class="bi bi-check-circle-fill"></i> Expense tracker, SIP calculator, dashboard</li>
+          <li><i class="bi bi-check-circle-fill"></i> Stocks, Mutual Funds, Gold, Fixed Deposits</li>
+          <li><i class="bi bi-check-circle-fill"></i> Up to {{ free_limit }} holdings</li>
+          <li class="no"><i class="bi bi-x-circle"></i> Other asset types (ETFs, Crypto, Land, ...)</li>
+          <li class="no"><i class="bi bi-x-circle"></i> Kids spending module</li>
+          <li class="no"><i class="bi bi-x-circle"></i> CSV export</li>
+        </ul>
+        {% if not current_user.is_premium %}<span class="text-muted">Your current plan</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card-box price-card featured">
+        <h5>Premium</h5>
+        <div class="price">₹{{ price }}<span class="small text-muted"> / month</span></div>
+        <ul class="feature-list">
+          <li><i class="bi bi-check-circle-fill"></i> Everything in Free</li>
+          <li><i class="bi bi-check-circle-fill"></i> All 12 asset types</li>
+          <li><i class="bi bi-check-circle-fill"></i> Unlimited holdings</li>
+          <li><i class="bi bi-check-circle-fill"></i> Kids spending module and education planner</li>
+          <li><i class="bi bi-check-circle-fill"></i> CSV export</li>
+        </ul>
+
+        {% if current_user.is_premium %}
+          <span class="text-profit fw-semibold">Active until {{ current_user.premium_until.strftime('%d %b %Y') }}</span>
+        {% elif open_request %}
+          <a href="{{ url_for('billing.payment', request_id=open_request.id) }}" class="btn btn-accent w-100">
+            Continue your payment</a>
+        {% else %}
+          <form method="POST" action="{{ url_for('billing.upgrade') }}">
+            <button type="submit" class="btn btn-accent w-100">Upgrade to Premium</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

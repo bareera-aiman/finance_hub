@@ -1,0 +1,7 @@
+{% extends "auth_base.html" %}
+{% block title %}Not found{% endblock %}
+{% block content %}
+  <div class="auth-title">Page not found</div>
+  <div class="auth-sub">That page doesn't exist, or it isn't yours to view.</div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-accent w-100">Back to dashboard</a>
+{% endblock %}
